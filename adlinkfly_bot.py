@@ -153,8 +153,7 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     api_key = user_data["api_key"]
-    # Point to your self-hosted PHP API
-    api_url = f"https://yourdomain.com/balance-api.php?api={api_key}"
+    api_url = f"https://linxshort.me/balance-api.php?api={api_key}"  # your PHP API
 
     try:
         resp = requests.get(api_url, timeout=10)
@@ -162,11 +161,7 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text(f"❌ Failed to fetch balance. HTTP {resp.status_code}")
             return
 
-        try:
-            data = resp.json()
-        except ValueError:
-            await update.message.reply_text(f"❌ Failed to parse balance response. Response:\n{resp.text}")
-            return
+        data = resp.json()  # now you get clean JSON
 
         if data.get("status") == "success":
             msg = (
