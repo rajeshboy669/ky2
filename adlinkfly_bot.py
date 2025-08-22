@@ -135,7 +135,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def features(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     features_text = (
-        "Bot Features:\n"
+        "Bot Features::::::\n"
         "1. URL Shortening\n"
         "2. Bulk URL Processing\n"
         "3. Telegram link exclusion\n"
@@ -155,8 +155,16 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     api_key = user_data["api_key"]
     api_url = f"https://linxshort.me/balance-api.php?api={api_key}"
 
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+        "Accept": "application/json,text/javascript,*/*;q=0.01",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://linxshort.me/",
+    }
+
     try:
-        resp = requests.get(api_url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        resp = requests.get(api_url, timeout=10, headers=headers)
         if resp.status_code != 200:
             await update.message.reply_text(f"❌ Failed to fetch balance. HTTP {resp.status_code}")
             return
@@ -177,10 +185,12 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             )
         else:
             msg = f"❌ Error: {data.get('message','Unknown error')}"
+
         await update.message.reply_text(msg)
 
     except requests.exceptions.RequestException as e:
         await update.message.reply_text(f"❌ Request failed: {e}")
+
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
