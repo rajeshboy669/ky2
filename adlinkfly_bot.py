@@ -156,7 +156,7 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     api_url = f"https://linxshort.me/balance-api.php?api={api_key}"
 
     try:
-        resp = requests.get(api_url, timeout=10)
+        resp = requests.get(api_url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
         if resp.status_code != 200:
             await update.message.reply_text(f"❌ Failed to fetch balance. HTTP {resp.status_code}")
             return
@@ -177,7 +177,6 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             )
         else:
             msg = f"❌ Error: {data.get('message','Unknown error')}"
-
         await update.message.reply_text(msg)
 
     except requests.exceptions.RequestException as e:
