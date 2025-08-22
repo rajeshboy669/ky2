@@ -27,8 +27,8 @@ def health_check():
         return 'Service Unavailable', 503
 
 # Read environment variables
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN")
-MONGODB_URI = os.getenv("MONGODB_URI", "YOUR_MONGO_URI")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7613950530:AAEUaQ2Qs8PJYhud4G2eNmG-ZdDJ8xO9JOM")
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://aaroha:aaroha@cluster0.8z6ob17.mongodb.net/Cluster0?retryWrites=true&w=majority&appName=Cluster0")
 ADLINKFLY_API_URL = "https://linxshort.me/api"
 
 # Validate environment variables
