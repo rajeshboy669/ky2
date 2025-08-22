@@ -96,7 +96,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     welcome_message = (
-        f"Hello {user_name}! 👋😃\n\n"
+        f"Hello AA {user_name}! 👋😃\n\n"
         "🚀 Welcome to Linxshort BOT - Your Personal URL Shortener Bot. 🌐\n\n"
         "Just send me a link, and I'll work my magic to shorten it for you. Plus, I'll keep track of your earnings! 💰💼\n\n"
         "Get started now and experience the power of Linxshort BOT. 💪🔗\n\n"
