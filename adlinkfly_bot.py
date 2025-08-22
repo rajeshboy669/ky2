@@ -157,24 +157,32 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-        "Accept": "application/json,text/javascript,*/*;q=0.01",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://linxshort.me/",
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/139.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/javascript, */*; q=0.01",
     }
 
     try:
-        resp = requests.get(api_url, timeout=10, headers=headers)
+        session = requests.Session()
+        resp = session.get(api_url, timeout=10, headers=headers)
+
         if resp.status_code != 200:
             await update.message.reply_text(f"❌ Failed to fetch balance. HTTP {resp.status_code}")
             return
 
+        # Try to parse JSON safely
         try:
             data = resp.json()
         except ValueError:
-            await update.message.reply_text(f"❌ Failed to parse balance response. Response:\n{resp.text}")
+            # If HTML detected, likely bot verification
+            snippet = resp.text[:300].replace("\n", " ")
+            await update.message.reply_text(
+                f"❌ Cannot fetch balance: Server returned verification page.\n"
+                f"Snippet: {snippet} ..."
+            )
             return
 
+        # JSON parsed successfully
         if data.get("status") == "success":
             msg = (
                 f"👤 Username: {data['username']}\n"
@@ -185,12 +193,10 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             )
         else:
             msg = f"❌ Error: {data.get('message','Unknown error')}"
-
         await update.message.reply_text(msg)
 
     except requests.exceptions.RequestException as e:
         await update.message.reply_text(f"❌ Request failed: {e}")
-
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
