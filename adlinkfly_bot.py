@@ -153,36 +153,21 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     api_key = user_data["api_key"]
-    api_url = f"https://linxshort.me/balance-api.php?api={api_key}"
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/139.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/javascript, */*; q=0.01",
-    }
+    # Point to your self-hosted PHP API
+    api_url = f"https://yourdomain.com/balance-api.php?api={api_key}"
 
     try:
-        session = requests.Session()
-        resp = session.get(api_url, timeout=10, headers=headers)
-
+        resp = requests.get(api_url, timeout=10)
         if resp.status_code != 200:
             await update.message.reply_text(f"❌ Failed to fetch balance. HTTP {resp.status_code}")
             return
 
-        # Try to parse JSON safely
         try:
             data = resp.json()
         except ValueError:
-            # If HTML detected, likely bot verification
-            snippet = resp.text[:300].replace("\n", " ")
-            await update.message.reply_text(
-                f"❌ Cannot fetch balance: Server returned verification page.\n"
-                f"Snippet: {snippet} ..."
-            )
+            await update.message.reply_text(f"❌ Failed to parse balance response. Response:\n{resp.text}")
             return
 
-        # JSON parsed successfully
         if data.get("status") == "success":
             msg = (
                 f"👤 Username: {data['username']}\n"
