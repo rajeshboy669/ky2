@@ -121,49 +121,58 @@ async def set_api_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         logger.error(f"Error setting API key: {e}")
         await update.message.reply_text("An error occurred. Please try again.")
 
-async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def balance(api_key: str) -> dict:
     try:
-        user_id = update.message.from_user.id
-        api_key = context.user_data.get("api_key")
-        if not api_key:
-            user_data = users_collection.find_one({"user_id": user_id})
-            api_key = user_data.get("api_key") if user_data else None
-            if api_key:
-                context.user_data["api_key"] = api_key
-            else:
-                await update.message.reply_text("Please set your Linxshort API key using /setapi first.")
-                return
-
-        # Show waiting message
-        wait_msg = await update.message.reply_text("🔄 Fetching your balance information...")
+        url = "https://linxshort.me/balance-api.php"
+        params = {"api": api_key}
         
-        # Get balance information
-        balance_data = await get_balance_info(api_key)
+        logger.info(f"Requesting balance API with key: {api_key[:10]}...")
         
-        # Delete waiting message
-        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=wait_msg.message_id)
+        timeout = aiohttp.ClientTimeout(total=15)
+        connector = aiohttp.TCPConnector(ssl=False)
         
-        if balance_data.get("status") == "success":
-            # Format the balance information
-            balance_text = (
-                f"💰 *Balance Information for {balance_data.get('username', 'User')}* 💰\n\n"
-                f"👤 User ID: `{balance_data.get('user_id', 'N/A')}`\n"
-                f"📧 Email: {balance_data.get('email', 'N/A')}\n\n"
-                f"💵 Current Balance: ${balance_data.get('balance', 0):.2f}\n"
-                f"🏧 Total Withdrawn: ${balance_data.get('withdrawn', 0):.2f}\n"
-                f"👥 Referral Earnings: ${balance_data.get('referrals', 0):.2f}\n"
-                f"🔗 Total Links: {balance_data.get('total_links', 0)}\n\n"
-                f"🌐 Dashboard: https://linxshort.me/dashboard"
-            )
-            
-            await update.message.reply_text(balance_text, parse_mode="Markdown")
-        else:
-            error_msg = balance_data.get("message", "Unknown error occurred")
-            await update.message.reply_text(f"❌ Error: {error_msg}")
-            
+        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+            async with session.get(url, params=params) as response:
+                content_type = response.headers.get('Content-Type', '')
+                response_text = await response.text()
+                
+                logger.info(f"Response status: {response.status}")
+                logger.info(f"Content-Type: {content_type}")
+                logger.info(f"Response preview: {response_text[:200]}...")
+                
+                # Check if response is JSON
+                if 'application/json' in content_type:
+                    try:
+                        data = await response.json()
+                        return data
+                    except Exception as json_error:
+                        logger.error(f"JSON parse error: {json_error}")
+                        return {"status": "error", "message": "Invalid JSON format"}
+                else:
+                    # Handle HTML response (likely an error page)
+                    logger.error(f"Unexpected content type: {content_type}")
+                    logger.error(f"Full response: {response_text}")
+                    
+                    # Try to extract error message from HTML
+                    error_msg = "Server returned HTML instead of JSON"
+                    if "error" in response_text.lower():
+                        # Simple extraction of potential error message
+                        import re
+                        error_match = re.search(r'<title>(.*?)</title>', response_text, re.IGNORECASE)
+                        if error_match:
+                            error_msg = f"Server error: {error_match.group(1)}"
+                    
+                    return {"status": "error", "message": error_msg}
+                    
+    except asyncio.TimeoutError:
+        logger.error("Balance API request timed out")
+        return {"status": "error", "message": "Request timed out"}
+    except aiohttp.ClientError as e:
+        logger.error(f"HTTP error: {e}")
+        return {"status": "error", "message": f"HTTP error: {str(e)}"}
     except Exception as e:
-        logger.error(f"Error checking balance: {e}")
-        await update.message.reply_text("An error occurred while fetching your balance. Please try again.")
+        logger.error(f"Unexpected error: {e}")
+        return {"status": "error", "message": f"Unexpected error: {str(e)}"}
 
 async def logout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
