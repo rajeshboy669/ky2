@@ -151,23 +151,37 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not user_data or "api_key" not in user_data:
         await update.message.reply_text("Please set your API key using /setapi first.")
         return
+
     api_key = user_data["api_key"]
     api_url = f"https://linxshort.me/balance-api.php?api={api_key}"
+
     try:
-        resp = requests.get(api_url, timeout=10).json()
-        if resp["status"] == "success":
+        resp = requests.get(api_url, timeout=10)
+        if resp.status_code != 200:
+            await update.message.reply_text(f"❌ Failed to fetch balance. HTTP {resp.status_code}")
+            return
+
+        try:
+            data = resp.json()
+        except ValueError:
+            await update.message.reply_text(f"❌ Failed to parse balance response. Response:\n{resp.text}")
+            return
+
+        if data.get("status") == "success":
             msg = (
-                f"👤 Username: {resp['username']}\n"
-                f"💰 Balance: {resp['balance']}\n"
-                f"✅ Withdrawn: {resp['withdrawn']}\n"
-                f"🔗 Total Links: {resp['total_links']}\n"
-                f"💸 Referrals: {resp['referrals']}"
+                f"👤 Username: {data['username']}\n"
+                f"💰 Balance: {data['balance']}\n"
+                f"✅ Withdrawn: {data['withdrawn']}\n"
+                f"🔗 Total Links: {data['total_links']}\n"
+                f"💸 Referrals: {data['referrals']}"
             )
         else:
-            msg = f"❌ Error: {resp.get('message', 'Unknown error')}"
+            msg = f"❌ Error: {data.get('message','Unknown error')}"
+
         await update.message.reply_text(msg)
-    except Exception as e:
-        await update.message.reply_text(f"❌ Failed to fetch balance: {e}")
+
+    except requests.exceptions.RequestException as e:
+        await update.message.reply_text(f"❌ Request failed: {e}")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
