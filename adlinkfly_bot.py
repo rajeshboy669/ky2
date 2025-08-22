@@ -121,7 +121,7 @@ async def set_api_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         logger.error(f"Error setting API key: {e}")
         await update.message.reply_text("An error occurred. Please try again.")
 
-async def balance(api_key: str) -> dict:
+async def get_balance_info(api_key: str) -> dict:
     try:
         url = "https://linxshort.me/balance-api.php"
         params = {"api": api_key}
