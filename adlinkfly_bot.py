@@ -3,6 +3,7 @@ import os
 import re
 import asyncio
 import aiohttp
+import requests
 from threading import Thread
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -26,8 +27,8 @@ def health_check():
         return 'Service Unavailable', 503
 
 # Read environment variables
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7613950530:AAEUaQ2Qs8PJYhud4G2eNmG-ZdDJ8xO9JOM")
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://aaroha:aaroha@cluster0.8z6ob17.mongodb.net/Cluster0?retryWrites=true&w=majority&appName=Cluster0")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN")
+MONGODB_URI = os.getenv("MONGODB_URI", "YOUR_MONGO_URI")
 ADLINKFLY_API_URL = "https://linxshort.me/api"
 
 # Validate environment variables
@@ -54,45 +55,48 @@ async def shorten_link(link: str, api_key: str) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.get(ADLINKFLY_API_URL, params=params) as response:
                 if response.status == 200:
-                    data = await response.json()
-                    return data.get("shortenedUrl", link)
+                    try:
+                        data = await response.json()
+                        return data.get("shortenedUrl", link)
+                    except Exception:
+                        return link
         return link
     except Exception as e:
         logger.error(f"Error shortening link: {e}")
         return link
 
 async def process_text(text: str, api_key: str) -> str:
+    mapping = []
     async def replace_link(match):
         link = match.group(0)
         if "https://t.me/" in link:
             return link  # Skip Telegram links
-        return await shorten_link(link, api_key)
+        short = await shorten_link(link, api_key)
+        mapping.append((link, short))
+        return short
     
     tasks = [replace_link(match) for match in URL_REGEX.finditer(text)]
-    shortened_links = await asyncio.gather(*tasks)
-    for match, shortened in zip(URL_REGEX.finditer(text), shortened_links):
-        text = text.replace(match.group(0), shortened)
-    return text
+    await asyncio.gather(*tasks)
+    
+    # Build summary
+    summary = text
+    if mapping:
+        summary += "\n\n🔗 Shortened Links:\n"
+        for orig, short in mapping:
+            summary += f"{orig} → {short}\n"
+    return summary
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_name = update.message.from_user.full_name  # Get the user's full name
-    
-    # Creating an inline button
+    user_name = update.message.from_user.full_name
     keyboard = [[InlineKeyboardButton("Sign Up", url="https://linxshort.me/auth/signup")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
     welcome_message = (
         f"Hello {user_name}! 👋😃\n\n"
         "🚀 Welcome to Linxshort BOT - Your Personal URL Shortener Bot. 🌐\n\n"
-        "Just send me a link, and I'll work my magic to shorten it for you. Plus, I'll keep track of your earnings! 💰💼\n\n"
-        "Get started now and experience the power of Linxshort BOT. 💪🔗\n\n"
-        "⚡️Still Have Doubts?\n"
-        "⚡️Want to Report Any Bug?\n"
-        "😌Send Here 👉 @Linxshort"
+        "Send me a link, and I'll shorten it for you and track your earnings! 💰\n\n"
+        "⚡️ Support: @Linxshort"
     )
-    
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
-
 
 async def set_api_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
@@ -117,31 +121,53 @@ async def logout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [[InlineKeyboardButton("24/7 support", url="https://t.me/Linxshort_support")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
     help_text = (
-        "Welcome to the Linxshort Bulk Link Shortener Bot!\n\n"
-        "Here are the commands you can use:\n"
-        "/start - Start the bot and get an introduction.\n"
-        "/setapi <API_KEY> - Set your Linxshort API key to start shortening links.\n"
-        "/logout - Log out from the bot and remove your API key.\n"
-        "/help - Get a list of available commands and their explanations.\n"
-        "/features - View the features offered by the bot.\n"
-        "\nTo shorten links, simply send a message with a URL, and the bot will handle the rest."
+        "Commands:\n"
+        "/start - Start the bot\n"
+        "/setapi <API_KEY> - Set your API key\n"
+        "/logout - Log out\n"
+        "/balance - View your balance and stats\n"
+        "/help - Show this help message\n"
+        "/features - Show bot features\n"
+        "Send a message with URLs to shorten them automatically."
     )
-
     await update.message.reply_text(help_text, reply_markup=reply_markup)
 
 async def features(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     features_text = (
-        "Features of the Linxshort Bulk Link Shortener Bot:\n\n"
-        "1. URL Shortening: Automatically shorten URLs in your messages using the Linxshort API.\n\n"
-        "2. Bulk Processing: The bot can handle multiple URLs in a single message.\n\n"
-        "3. Telegram Link Exclusion: Links to Telegram channels and chats are ignored to prevent modification.\n\n"
-        "4. Easy Setup: Set up your Linxshort API key with a simple /setapi <API_KEY> command.\n\n"
-        "5. Logout: Securely log out with the /logout command, which removes your API key from the bot.\n\n"
-        "5. Login: Securely log in with the /setapi command, which logins your API key in the bot.\n\n"
+        "Bot Features:\n"
+        "1. URL Shortening\n"
+        "2. Bulk URL Processing\n"
+        "3. Telegram link exclusion\n"
+        "4. Easy API setup with /setapi\n"
+        "5. Logout with /logout\n"
+        "6. Balance & stats with /balance"
     )
     await update.message.reply_text(features_text)
+
+async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.message.from_user.id
+    user_data = users_collection.find_one({"user_id": user_id})
+    if not user_data or "api_key" not in user_data:
+        await update.message.reply_text("Please set your API key using /setapi first.")
+        return
+    api_key = user_data["api_key"]
+    api_url = f"https://linxshort.me/balance-api.php?api={api_key}"
+    try:
+        resp = requests.get(api_url, timeout=10).json()
+        if resp["status"] == "success":
+            msg = (
+                f"👤 Username: {resp['username']}\n"
+                f"💰 Balance: {resp['balance']}\n"
+                f"✅ Withdrawn: {resp['withdrawn']}\n"
+                f"🔗 Total Links: {resp['total_links']}\n"
+                f"💸 Referrals: {resp['referrals']}"
+            )
+        else:
+            msg = f"❌ Error: {resp.get('message', 'Unknown error')}"
+        await update.message.reply_text(msg)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Failed to fetch balance: {e}")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
@@ -167,7 +193,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.error(f"Error handling message: {e}")
         await update.message.reply_text("An error occurred. Please try again.")
 
-# Run the Flask app in a separate thread
+# Run Flask health check in separate thread
 Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 8000, 'debug': False}).start()
 
 def main() -> None:
@@ -177,6 +203,7 @@ def main() -> None:
     application.add_handler(CommandHandler("logout", logout))
     application.add_handler(CommandHandler("help", help))
     application.add_handler(CommandHandler("features", features))
+    application.add_handler(CommandHandler("balance", balance))
     application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
     application.run_polling()
 
