@@ -241,7 +241,7 @@ def main() -> None:
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("setapi", set_api_key))
-    application.add_handler(CommandHandler("balance", balance))
+    application.add_handler(CommandHandler("get_balance_info", balance))
     application.add_handler(CommandHandler("logout", logout))
     application.add_handler(CommandHandler("help", help))
     application.add_handler(CommandHandler("features", features))
