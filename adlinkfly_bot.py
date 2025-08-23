@@ -35,8 +35,8 @@ def health_check():
         return 'Service Unavailable', 503
 
 # ----------------- Environment Variables -----------------
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "<YOUR_BOT_TOKEN>")
-MONGODB_URI = os.getenv("MONGODB_URI", "<YOUR_MONGODB_URI>")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7613950530:AAEUaQ2Qs8PJYhud4G2eNmG-ZdDJ8xO9JOM")
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://aaroha:aaroha@cluster0.8z6ob17.mongodb.net/Cluster0?retryWrites=true&w=majority&appName=Cluster0")
 ADLINKFLY_API_URL = "https://linxshort.me/api"
 
 if not TELEGRAM_BOT_TOKEN or not MONGODB_URI:
@@ -52,7 +52,7 @@ client = MongoClient(MONGODB_URI)
 db = client[db_name]
 users_collection = db["users"]
 
-# ----------------- URL Shortening -----------------
+# Regular expression to find URLs in text
 URL_REGEX = re.compile(r'https?://[^\s]+')
 
 async def shorten_link(link: str, api_key: str) -> str:
@@ -72,7 +72,7 @@ async def process_text(text: str, api_key: str) -> str:
     async def replace_link(match):
         link = match.group(0)
         if "https://t.me/" in link:
-            return link
+            return link  # Skip Telegram links
         return await shorten_link(link, api_key)
     
     tasks = [replace_link(match) for match in URL_REGEX.finditer(text)]
