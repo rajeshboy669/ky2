@@ -19,11 +19,13 @@ from telegram.ext import (
 from pymongo import MongoClient
 from pymongo.uri_parser import parse_uri
 
-# Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# ----------------- Logging -----------------
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app for health check
+# ----------------- Flask Health Check -----------------
 app = Flask(__name__)
 
 @app.route('/health', methods=['GET'])
@@ -34,27 +36,27 @@ def health_check():
         logger.error(f"Health check failed: {e}")
         return 'Service Unavailable', 503
 
-# Read environment variables
+Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 8000, 'debug': False}).start()
+
+# ----------------- Environment Variables -----------------
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7613950530:AAEUaQ2Qs8PJYhud4G2eNmG-ZdDJ8xO9JOM")
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://aaroha:aaroha@cluster0.8z6ob17.mongodb.net/Cluster0?retryWrites=true&w=majority&appName=Cluster0")
 ADLINKFLY_API_URL = "https://linxshort.me/api"
 
-# Validate environment variables
 if not TELEGRAM_BOT_TOKEN or not MONGODB_URI:
     raise ValueError("Missing required environment variables.")
 
-# Parse MongoDB URI to extract database name
+# ----------------- MongoDB Setup -----------------
 parsed_uri = parse_uri(MONGODB_URI)
 db_name = parsed_uri.get("database")
 if not db_name:
     raise ValueError("Database name not found in MONGODB_URI.")
 
-# Initialize MongoDB client and database
 client = MongoClient(MONGODB_URI)
 db = client[db_name]
 users_collection = db["users"]
 
-# Regular expression to find URLs in text
+# ----------------- URL Shortening -----------------
 URL_REGEX = re.compile(r'https?://[^\s]+')
 
 async def shorten_link(link: str, api_key: str) -> str:
@@ -63,11 +65,8 @@ async def shorten_link(link: str, api_key: str) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.get(ADLINKFLY_API_URL, params=params) as response:
                 if response.status == 200:
-                    try:
-                        data = await response.json()
-                        return data.get("shortenedUrl", link)
-                    except Exception:
-                        return link
+                    data = await response.json()
+                    return data.get("shortenedUrl", link)
         return link
     except Exception as e:
         logger.error(f"Error shortening link: {e}")
@@ -75,17 +74,18 @@ async def shorten_link(link: str, api_key: str) -> str:
 
 async def process_text(text: str, api_key: str) -> str:
     mapping = []
+
     async def replace_link(match):
         link = match.group(0)
         if "https://t.me/" in link:
-            return link  # Skip Telegram links
+            return link
         short = await shorten_link(link, api_key)
         mapping.append((link, short))
         return short
-    
+
     tasks = [replace_link(match) for match in URL_REGEX.finditer(text)]
     await asyncio.gather(*tasks)
-    
+
     summary = text
     if mapping:
         summary += "\n\n🔗 Shortened Links:\n"
@@ -94,7 +94,7 @@ async def process_text(text: str, api_key: str) -> str:
     return summary
 
 # ----------------- Bot Commands -----------------
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.message.from_user.full_name
     keyboard = [[InlineKeyboardButton("Sign Up", url="https://linxshort.me/auth/signup")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -106,7 +106,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
-async def set_api_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def set_api_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = update.message.from_user.id
         api_key = context.args[0] if context.args else None
@@ -120,13 +120,13 @@ async def set_api_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         logger.error(f"Error setting API key: {e}")
         await update.message.reply_text("An error occurred. Please try again.")
 
-async def logout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def logout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     users_collection.delete_one({"user_id": user_id})
     context.user_data.pop("api_key", None)
     await update.message.reply_text("You have been logged out.")
 
-async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("24/7 support", url="https://t.me/Linxshort_support")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     help_text = (
@@ -142,7 +142,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
     await update.message.reply_text(help_text, reply_markup=reply_markup)
 
-async def features(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def features(update: Update, context: ContextTypes.DEFAULT_TYPE):
     features_text = (
         "Bot Features:\n"
         "1. URL Shortening\n"
@@ -155,7 +155,7 @@ async def features(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
     await update.message.reply_text(features_text)
 
-async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_data = users_collection.find_one({"user_id": user_id})
     if not user_data or "api_key" not in user_data:
@@ -179,7 +179,7 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to fetch balance: {e}")
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = update.message.from_user.id
         api_key = context.user_data.get("api_key")
@@ -218,7 +218,6 @@ async def withdraw_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return WITHDRAW_AMOUNT
         context.user_data["withdraw_amount"] = amount
 
-        # Fetch available withdraw methods
         user_id = update.message.from_user.id
         user_data = users_collection.find_one({"user_id": user_id})
         api_key = context.user_data.get("api_key") or user_data.get("api_key")
@@ -231,7 +230,6 @@ async def withdraw_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         methods = [m for m in resp["methods"] if m["status"]]
         context.user_data["withdraw_methods"] = methods
 
-        # Prepare buttons for enabled methods
         buttons = [[InlineKeyboardButton(m["name"], callback_data=m["id"])] for m in methods]
         reply_markup = InlineKeyboardMarkup(buttons)
         await update.message.reply_text("Select a withdrawal method:", reply_markup=reply_markup)
@@ -257,7 +255,7 @@ async def withdraw_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["withdraw_method_name"] = method["name"]
 
-    # Check if extra account info is required
+    # If account info required
     if "account_required" in method and method["account_required"]:
         await query.edit_message_text(f"Enter your account info for {method['name']}:")
         return WITHDRAW_DETAILS
@@ -301,23 +299,11 @@ async def cancel_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("❌ Withdrawal canceled.")
     return ConversationHandler.END
 
-# ----------------- Run Flask Health Check -----------------
-Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 8000, 'debug': False}).start()
-
 # ----------------- Main -----------------
-def main() -> None:
+def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Add commands
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("setapi", set_api_key))
-    application.add_handler(CommandHandler("logout", logout))
-    application.add_handler(CommandHandler("help", help))
-    application.add_handler(CommandHandler("features", features))
-    application.add_handler(CommandHandler("balance", balance))
-    application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
-
-    # Withdraw conversation
+    # --- Withdraw Handler FIRST ---
     withdraw_handler = ConversationHandler(
         entry_points=[CommandHandler("withdraw", withdraw_start)],
         states={
@@ -329,8 +315,17 @@ def main() -> None:
     )
     application.add_handler(withdraw_handler)
 
-    # Start the bot
+    # --- Other Handlers ---
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("setapi", set_api_key))
+    application.add_handler(CommandHandler("logout", logout))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("features", features))
+    application.add_handler(CommandHandler("balance", balance))
+    application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
+
+    # --- Start Bot ---
     application.run_polling()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
