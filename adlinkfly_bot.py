@@ -238,8 +238,8 @@ async def withdraw_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["withdraw_method_name"] = method["name"]
 
-    # If account info required
-    if "account_required" in method and method["account_required"]:
+    # Only ask for account if method requires it
+    if method.get("account_required", False):
         await query.edit_message_text(f"Enter your account info for {method['name']}:")
         return WITHDRAW_DETAILS
     else:
@@ -265,7 +265,7 @@ async def submit_withdrawal(update_obj, context: ContextTypes.DEFAULT_TYPE):
 
         resp = requests.get(f"https://linxshort.me/withdraw-api.php", params=payload, timeout=10).json()
         if resp["status"] == "success":
-            msg = f"✅ Withdrawal request submitted successfully!\nAmount: {payload['amount']}\nMethod: {context.user_data['withdraw_method_name']}"
+            msg = f"✅ Withdrawal request submitted!\nAmount: {payload['amount']}\nMethod: {context.user_data['withdraw_method_name']}"
         else:
             msg = f"❌ Withdrawal failed: {resp.get('message', 'Unknown error')}"
 
@@ -281,14 +281,12 @@ async def submit_withdrawal(update_obj, context: ContextTypes.DEFAULT_TYPE):
 async def cancel_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("❌ Withdrawal canceled.")
     return ConversationHandler.END
-# ----------------- Run Flask -----------------
-Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 8000, 'debug': False}).start()
 
 # ----------------- Main -----------------
-def main() -> None:
+def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-     # --- Withdraw Handler FIRST ---
+    # Withdraw conversation
     withdraw_handler = ConversationHandler(
         entry_points=[CommandHandler("withdraw", withdraw_start)],
         states={
@@ -299,7 +297,8 @@ def main() -> None:
         fallbacks=[CommandHandler("cancel", cancel_withdraw)],
     )
     application.add_handler(withdraw_handler)
-    # Commands
+
+    # Other commands
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("setapi", set_api_key))
     application.add_handler(CommandHandler("logout", logout))
@@ -308,8 +307,8 @@ def main() -> None:
     application.add_handler(CommandHandler("balance", balance))
     application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
 
-   # Start polling
-    application.run_polling()  # <-- must be indented inside main()
+    # Start polling
+    application.run_polling()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
