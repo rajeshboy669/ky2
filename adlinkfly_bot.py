@@ -139,17 +139,29 @@ async def features(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(features_text)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_id = update.message.from_user.id
-    api_key = context.user_data.get("api_key") or users_collection.find_one({"user_id": user_id}, {"api_key": 1}).get("api_key")
-    if not api_key:
-        await update.message.reply_text("Please set your API key using /setapi.")
-        return
+    try:
+        user_id = update.message.from_user.id
+        api_key = context.user_data.get("api_key")
+        if not api_key:
+            user_data = users_collection.find_one({"user_id": user_id})
+            api_key = user_data.get("api_key") if user_data else None
+            if api_key:
+                context.user_data["api_key"] = api_key
+            else:
+                await update.message.reply_text("Please set your Linxshort API key using /setapi.")
+                return
 
-    text = update.message.text or update.message.caption
-    if text:
-        processed_text = await process_text(text, api_key)
-        await update.message.reply_text(processed_text)
-
+        text = update.message.text or update.message.caption
+        if text:
+            processed_text = await process_text(text, api_key)
+            if update.message.text:
+                await update.message.reply_text(processed_text)
+            elif update.message.caption:
+                await update.message.reply_photo(update.message.photo[-1].file_id, caption=processed_text)
+    except Exception as e:
+        logger.error(f"Error handling message: {e}")
+        await update.message.reply_text("An error occurred. Please try again.")
+        
 # ----------------- Balance & Withdraw -----------------
 WITHDRAW_AMOUNT, WITHDRAW_METHOD, WITHDRAW_DETAILS = range(3)
 
