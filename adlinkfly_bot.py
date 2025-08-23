@@ -318,17 +318,18 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
 
     # Withdraw conversation
-withdraw_handler = ConversationHandler(
-    entry_points=[CommandHandler("withdraw", withdraw_start)],
-    states={
-        WITHDRAW_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_amount)],
-        WITHDRAW_METHOD: [CallbackQueryHandler(withdraw_method)],
-        WITHDRAW_DETAILS: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_details)],
-    },
-    fallbacks=[CommandHandler("cancel", cancel_withdraw)],
-)
-application.add_handler(withdraw_handler)
+    withdraw_handler = ConversationHandler(
+        entry_points=[CommandHandler("withdraw", withdraw_start)],
+        states={
+            WITHDRAW_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_amount)],
+            WITHDRAW_METHOD: [CallbackQueryHandler(withdraw_method)],
+            WITHDRAW_DETAILS: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_details)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel_withdraw)],
+    )
+    application.add_handler(withdraw_handler)
 
+    # Start the bot
     application.run_polling()
 
 if __name__ == '__main__':
