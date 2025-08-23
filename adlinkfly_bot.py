@@ -163,8 +163,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("An error occurred. Please try again.")
         
 # ----------------- Balance & Withdraw -----------------
-WITHDRAW_AMOUNT, WITHDRAW_METHOD, WITHDRAW_DETAILS = range(3)
-
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_data = users_collection.find_one({"user_id": user_id})
@@ -188,7 +186,9 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Failed: {e}")
 
-# States
+# ----------------- Withdraw Feature -----------------
+WITHDRAW_AMOUNT, WITHDRAW_METHOD, WITHDRAW_DETAILS = range(3)
+
 async def withdraw_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("💰 Enter the amount you want to withdraw:")
     return WITHDRAW_AMOUNT
@@ -201,21 +201,18 @@ async def withdraw_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return WITHDRAW_AMOUNT
         context.user_data["withdraw_amount"] = amount
 
-        # Fetch withdrawal methods
         user_id = update.message.from_user.id
         user_data = users_collection.find_one({"user_id": user_id})
         api_key = context.user_data.get("api_key") or user_data.get("api_key")
-
         resp = requests.get(f"https://linxshort.me/withdraw-methods-api.php?api={api_key}", timeout=10).json()
+
         if resp["status"] != "success" or not resp["methods"]:
             await update.message.reply_text("❌ No withdrawal methods found.")
             return ConversationHandler.END
 
-        # Filter enabled methods
         methods = [m for m in resp["methods"] if m["status"]]
         context.user_data["withdraw_methods"] = methods
 
-        # Buttons
         buttons = [[InlineKeyboardButton(m["name"], callback_data=m["id"])] for m in methods]
         reply_markup = InlineKeyboardMarkup(buttons)
         await update.message.reply_text("Select a withdrawal method:", reply_markup=reply_markup)
@@ -241,8 +238,8 @@ async def withdraw_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["withdraw_method_name"] = method["name"]
 
-    # Check if account info is required
-    if method.get("account_required"):
+    # If account info required
+    if "account_required" in method and method["account_required"]:
         await query.edit_message_text(f"Enter your account info for {method['name']}:")
         return WITHDRAW_DETAILS
     else:
@@ -266,8 +263,7 @@ async def submit_withdrawal(update_obj, context: ContextTypes.DEFAULT_TYPE):
         if "withdraw_account" in context.user_data:
             payload["account"] = context.user_data["withdraw_account"]
 
-        resp = requests.get("https://linxshort.me/withdraw-api.php", params=payload, timeout=10).json()
-
+        resp = requests.get(f"https://linxshort.me/withdraw-api.php", params=payload, timeout=10).json()
         if resp["status"] == "success":
             msg = f"✅ Withdrawal request submitted successfully!\nAmount: {payload['amount']}\nMethod: {context.user_data['withdraw_method_name']}"
         else:
@@ -277,7 +273,6 @@ async def submit_withdrawal(update_obj, context: ContextTypes.DEFAULT_TYPE):
             await update_obj.message.reply_text(msg)
         else:
             await update_obj.edit_message_text(msg)
-
         return ConversationHandler.END
     except Exception as e:
         await update_obj.message.reply_text(f"❌ Error: {e}")
@@ -286,23 +281,14 @@ async def submit_withdrawal(update_obj, context: ContextTypes.DEFAULT_TYPE):
 async def cancel_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("❌ Withdrawal canceled.")
     return ConversationHandler.END
-
 # ----------------- Run Flask -----------------
 Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 8000, 'debug': False}).start()
 
 # ----------------- Main -----------------
 def main() -> None:
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    # Commands
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("setapi", set_api_key))
-    application.add_handler(CommandHandler("logout", logout))
-    application.add_handler(CommandHandler("help", help))
-    application.add_handler(CommandHandler("features", features))
-    application.add_handler(CommandHandler("balance", balance))
-    application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
 
-    # Withdraw conversation handler
+     # --- Withdraw Handler FIRST ---
     withdraw_handler = ConversationHandler(
         entry_points=[CommandHandler("withdraw", withdraw_start)],
         states={
@@ -313,8 +299,16 @@ def main() -> None:
         fallbacks=[CommandHandler("cancel", cancel_withdraw)],
     )
     application.add_handler(withdraw_handler)
+    # Commands
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("setapi", set_api_key))
+    application.add_handler(CommandHandler("logout", logout))
+    application.add_handler(CommandHandler("help", help))
+    application.add_handler(CommandHandler("features", features))
+    application.add_handler(CommandHandler("balance", balance))
+    application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
 
-    # Start polling
+   # Start polling
     application.run_polling()  # <-- must be indented inside main()
 
 if __name__ == '__main__':
