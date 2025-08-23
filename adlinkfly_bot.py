@@ -188,26 +188,45 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Failed: {e}")
 
+# States
 async def withdraw_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("💰 Enter withdrawal amount:")
+    await update.message.reply_text("💰 Enter the amount you want to withdraw:")
     return WITHDRAW_AMOUNT
 
 async def withdraw_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         amount = float(update.message.text)
+        if amount <= 0:
+            await update.message.reply_text("❌ Amount must be greater than 0. Enter again:")
+            return WITHDRAW_AMOUNT
         context.user_data["withdraw_amount"] = amount
+
+        # Fetch withdrawal methods
         user_id = update.message.from_user.id
         user_data = users_collection.find_one({"user_id": user_id})
         api_key = context.user_data.get("api_key") or user_data.get("api_key")
+
         resp = requests.get(f"https://linxshort.me/withdraw-methods-api.php?api={api_key}", timeout=10).json()
-        methods = [m for m in resp.get("methods", []) if m.get("status")]
+        if resp["status"] != "success" or not resp["methods"]:
+            await update.message.reply_text("❌ No withdrawal methods found.")
+            return ConversationHandler.END
+
+        # Filter enabled methods
+        methods = [m for m in resp["methods"] if m["status"]]
         context.user_data["withdraw_methods"] = methods
+
+        # Buttons
         buttons = [[InlineKeyboardButton(m["name"], callback_data=m["id"])] for m in methods]
-        await update.message.reply_text("Select withdraw method:", reply_markup=InlineKeyboardMarkup(buttons))
+        reply_markup = InlineKeyboardMarkup(buttons)
+        await update.message.reply_text("Select a withdrawal method:", reply_markup=reply_markup)
         return WITHDRAW_METHOD
-    except:
-        await update.message.reply_text("Enter a valid number:")
+
+    except ValueError:
+        await update.message.reply_text("❌ Invalid amount. Enter a numeric value:")
         return WITHDRAW_AMOUNT
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {e}")
+        return ConversationHandler.END
 
 async def withdraw_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -215,15 +234,19 @@ async def withdraw_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
     method_id = query.data
     context.user_data["withdraw_method"] = method_id
 
-    # Check if last account exists
-    user_id = query.from_user.id
-    last_account = users_collection.find_one({"user_id": user_id}, {"last_withdraw_account": 1}).get("last_withdraw_account")
-    if last_account:
-        context.user_data["withdraw_account"] = last_account
-        return await submit_withdrawal(query, context)
-    else:
-        await query.edit_message_text("Enter account info for withdrawal:")
+    method = next((m for m in context.user_data["withdraw_methods"] if m["id"] == method_id), None)
+    if not method:
+        await query.edit_message_text("❌ Invalid method selected.")
+        return ConversationHandler.END
+
+    context.user_data["withdraw_method_name"] = method["name"]
+
+    # Check if account info is required
+    if method.get("account_required"):
+        await query.edit_message_text(f"Enter your account info for {method['name']}:")
         return WITHDRAW_DETAILS
+    else:
+        return await submit_withdrawal(query, context)
 
 async def withdraw_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["withdraw_account"] = update.message.text
@@ -234,25 +257,27 @@ async def submit_withdrawal(update_obj, context: ContextTypes.DEFAULT_TYPE):
         user_id = update_obj.from_user.id
         user_data = users_collection.find_one({"user_id": user_id})
         api_key = context.user_data.get("api_key") or user_data.get("api_key")
+
         payload = {
             "api": api_key,
             "amount": context.user_data["withdraw_amount"],
             "method": context.user_data["withdraw_method"],
-            "account": context.user_data["withdraw_account"]
         }
-        resp = requests.get(f"https://linxshort.me/withdraw-api.php", params=payload, timeout=10).json()
+        if "withdraw_account" in context.user_data:
+            payload["account"] = context.user_data["withdraw_account"]
 
-        # Save last account
-        users_collection.update_one({"user_id": user_id}, {"$set": {"last_withdraw_account": context.user_data["withdraw_account"]}}, upsert=True)
+        resp = requests.get("https://linxshort.me/withdraw-api.php", params=payload, timeout=10).json()
 
         if resp["status"] == "success":
-            msg = f"✅ Withdrawal submitted! Amount: {payload['amount']}"
+            msg = f"✅ Withdrawal request submitted successfully!\nAmount: {payload['amount']}\nMethod: {context.user_data['withdraw_method_name']}"
         else:
-            msg = f"❌ Withdrawal failed: {resp.get('message', 'Unknown')}"
+            msg = f"❌ Withdrawal failed: {resp.get('message', 'Unknown error')}"
+
         if isinstance(update_obj, Update):
             await update_obj.message.reply_text(msg)
         else:
             await update_obj.edit_message_text(msg)
+
         return ConversationHandler.END
     except Exception as e:
         await update_obj.message.reply_text(f"❌ Error: {e}")
