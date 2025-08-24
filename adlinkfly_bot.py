@@ -21,11 +21,11 @@ from telegram.ext import (
 from pymongo import MongoClient
 from pymongo.uri_parser import parse_uri
 
-# ----------------- Logging -----------------
+# Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ----------------- Flask Health -----------------
+# Initialize Flask app for health check
 app = Flask(__name__)
 
 @app.route('/health', methods=['GET'])
@@ -35,7 +35,7 @@ def health_check():
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return 'Service Unavailable', 503
-        
+
 def run_web():
     """Run Flask web server for Koyeb health check"""
     app.run(host="0.0.0.0", port=8080)
@@ -400,6 +400,8 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await handle_message(update, context)
 
+# Run the Flask app in a separate thread
+Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 8000, 'debug': False}).start()
 
 def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
@@ -429,15 +431,6 @@ def main():
     application.add_handler(CommandHandler("account", account))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_handler))
     application.add_handler(MessageHandler(filters.PHOTO, handle_message))
-
-    # ✅ Run Flask health check in a separate thread
-    def run_web():
-        app.run(host="0.0.0.0", port=8080)
-
-    threading.Thread(target=run_web, daemon=True).start()
-
-    # ✅ Run the bot
-    logger.info("🚀 Bot + Flask health check started...")
     application.run_polling()
 
 
