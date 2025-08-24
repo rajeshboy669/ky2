@@ -94,37 +94,34 @@ def get_main_menu():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
 # Modify start to show menu
-from telegram.helpers import escape_markdown
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.message.from_user
-    if user.username:
-        user_name = f"@{escape_markdown(user.username, version=2)}"
-    else:
-        user_name = escape_markdown(user.first_name, version=2)
+    user_name = update.message.from_user.full_name
 
+    # Signup button
+    keyboard = [[InlineKeyboardButton("📝 Sign Up", url="https://linxshort.me/auth/signup")]]
+    signup_markup = InlineKeyboardMarkup(keyboard)
+
+    # Welcome text (MarkdownV2 safe — escaped special chars)
     welcome_message = (
-        f"👋 Hello {user_name}!\n\n"
+        f"👋 Hello *{user_name}*!\n\n"
         "🚀 *Welcome to Linxshort BOT* — your personal URL shortener & earnings tracker.\n\n"
-        "🔗 *How it works:* Send me any link and I'll shorten it instantly.\n\n"
-        "💰 *Track earnings:* Check your balance, stats, and withdraw anytime.\n\n"
+        "🔗 *How it works*: Send me any link and I\\'ll shorten it instantly.\n\n"
+        "💰 *Track earnings*: Check your balance, stats, and withdraw anytime.\n\n"
         "✨ Use the menu below to get started or explore all commands.\n\n"
         "❓ Need help? Contact 👉 @Linxshort"
     )
 
-    signup_button = [
-        [InlineKeyboardButton("📝 Sign Up", url="https://linxshort.me/auth/signup")]
-    ]
-    reply_markup = InlineKeyboardMarkup(signup_button)
-
-    # Send welcome + signup
+    # Send welcome + signup button
     await update.message.reply_text(
         welcome_message,
         parse_mode="MarkdownV2",
-        reply_markup=reply_markup,
+        reply_markup=signup_markup
     )
 
-    # Show menu separately
+    # Then show the main menu right after
     await update.message.reply_text(
         " ",
         reply_markup=get_main_menu()
