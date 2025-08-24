@@ -95,16 +95,36 @@ def get_main_menu():
     
 # Modify start to show menu
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_name = update.message.from_user.full_name
-    keyboard = [[InlineKeyboardButton("Sign Up", url="https://linxshort.me/auth/signup")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    user = update.message.from_user
+    user_name = f"@{user.username}" if user.username else user.first_name
+
     welcome_message = (
-        f"Hello {user_name}! 👋😃\n\n"
-        "🚀 Welcome to Linxshort BOT - Your Personal URL Shortener Bot. 🌐\n\n"
-        "Just send me a link, and I'll work my magic to shorten it for you. Plus, I'll keep track of your earnings! 💰💼\n\n"
-        "⚡️Still Have Doubts? Contact 👉 @Linxshort"
+        f"👋 Hello {user_name}!\n\n"
+        "🚀 **Welcome to Linxshort BOT** — your personal URL shortener & earnings tracker.\n\n"
+        "🔗 **How it works:** Just send me any link and I'll shorten it instantly.\n"
+        "💰 **Track earnings:** Check your balance, stats, and withdraw anytime.\n\n"
+        "✨ Use the menu below to get started or explore all commands.\n\n"
+        "❓ Need help? Contact 👉 @Linxshort"
     )
-    await update.message.reply_text(welcome_message, reply_markup=get_main_menu())
+
+    # Inline button for Sign Up only
+    signup_button = [
+        [InlineKeyboardButton("📝 Sign Up", url="https://linxshort.me/auth/signup")]
+    ]
+    reply_markup = InlineKeyboardMarkup(signup_button)
+
+    # Send welcome + signup button
+    await update.message.reply_text(
+        welcome_message,
+        parse_mode="Markdown",
+        reply_markup=reply_markup,
+    )
+
+    # Show the persistent menu
+    await update.message.reply_text(
+        "⬇️ Main Menu",
+        reply_markup=get_main_menu()
+    )
 
 async def set_api_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
