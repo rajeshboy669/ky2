@@ -34,7 +34,10 @@ def health_check():
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return 'Service Unavailable', 503
-
+        
+def run_web():
+    """Run Flask web server for Koyeb health check"""
+    app.run(host="0.0.0.0", port=8080)
 # ----------------- Environment Variables -----------------
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7613950530:AAEUaQ2Qs8PJYhud4G2eNmG-ZdDJ8xO9JOM")
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://aaroha:aaroha@cluster0.8z6ob17.mongodb.net/Cluster0?retryWrites=true&w=majority&appName=Cluster0")
@@ -397,7 +400,6 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_message(update, context)
 
 
-# ----------------- Main -----------------
 def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
@@ -416,7 +418,6 @@ def main():
     )
     application.add_handler(withdraw_handler)   # 👈 add this FIRST
 
-
     # Other commands
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("setapi", set_api_key))
@@ -427,9 +428,17 @@ def main():
     application.add_handler(CommandHandler("account", account))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_handler))
     application.add_handler(MessageHandler(filters.PHOTO, handle_message))
-    
-    # Start polling
+
+    # ✅ Run Flask health check in a separate thread
+    def run_web():
+        app.run(host="0.0.0.0", port=8080)
+
+    threading.Thread(target=run_web, daemon=True).start()
+
+    # ✅ Run the bot
+    logger.info("🚀 Bot + Flask health check started...")
     application.run_polling()
+
 
 if __name__ == "__main__":
     main()
