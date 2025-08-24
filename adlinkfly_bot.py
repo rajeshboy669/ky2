@@ -349,14 +349,6 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await balance(update, context)
     elif text == "👤 Account":
         await account(update, context)
-    elif text == "💸 Withdraw":
-    # Simulate user typing /withdraw to start conversation properly
-    fake_update = Update(
-        update.update_id,
-        message=update.message
-    )
-    # Manually trigger withdraw command
-    return await withdraw_start(fake_update, context)
     elif text == "🚪 Logout":
         await logout(update, context)
     elif text == "ℹ️ Help":
@@ -373,8 +365,10 @@ def main():
 
     # Withdraw conversation
     withdraw_handler = ConversationHandler(
-    entry_points=[CommandHandler("withdraw", withdraw_start),
-                  MessageHandler(filters.Regex("^💸 Withdraw$"), withdraw_start)],  # menu button too
+    entry_points=[
+        CommandHandler("withdraw", withdraw_start),
+        MessageHandler(filters.Regex("^💸 Withdraw$"), withdraw_start)  # menu button also works
+    ],
     states={
         WITHDRAW_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_amount)],
         WITHDRAW_METHOD: [CallbackQueryHandler(withdraw_method)],
