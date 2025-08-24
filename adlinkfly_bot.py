@@ -96,6 +96,8 @@ def get_main_menu():
 # Modify start to show menu
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_name = update.message.from_user.full_name
+    keyboard = [[InlineKeyboardButton("Sign Up", url="https://linxshort.me/auth/signup")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     welcome_message = (
         f"Hello {user_name}! 👋😃\n\n"
         "🚀 Welcome to Linxshort BOT - Your Personal URL Shortener Bot. 🌐\n\n"
@@ -124,26 +126,27 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [[InlineKeyboardButton("24/7 support", url="https://t.me/Linxshort_support")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     help_text = (
-        "/start - Start the bot\n"
-        "/setapi <API_KEY> - Set your API key\n"
-        "/logout - Log out\n"
-        "/balance - View balance & stats\n"
-        "/withdraw - Withdraw your earnings\n"
-        "/help - Show help message\n"
-        "Send links to shorten automatically."
-    )
+    "📌 **Available Commands:**\n\n"
+    "🏠 /start — **Start the bot**\n"
+    "🔑 /setapi `<API_KEY>` — **Set your API key**\n"
+    "🚪 /logout — **Log out**\n"
+    "📊 /balance — **View balance & stats**\n"
+    "💸 /withdraw — **Withdraw your earnings**\n"
+    "ℹ️ /help — **Show this help message**\n\n"
+    "🔗 **Just send me any link, and I’ll shorten it automatically.**"
+)
     await update.message.reply_text(help_text, reply_markup=reply_markup)
 
 async def features(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     features_text = (
-        "Bot Features:\n"
-        "1. URL Shortening\n"
-        "2. Bulk URL Processing\n"
-        "3. Telegram link exclusion\n"
-        "4. Easy API setup with /setapi\n"
-        "5. Logout with /logout\n"
-        "6. Balance & stats with /balance\n"
-        "7. Withdraw earnings with /withdraw"
+    "✨ Bot Features:\n\n"
+    "1️⃣ URL Shortening — Instantly shorten your links\n"
+    "2️⃣ Bulk Processing — Shorten multiple links at once\n"
+    "3️⃣ Telegram Exclusion — Skip Telegram links automatically\n"
+    "4️⃣ Easy API Setup — /setapi <API_KEY>\n"
+    "5️⃣ Logout — /logout\n"
+    "6️⃣ Balance & Stats — /balance\n"
+    "7️⃣ Withdraw Earnings — /withdraw\n\n"
     )
     await update.message.reply_text(features_text)
 
@@ -227,11 +230,11 @@ async def account(update: Update, context: ContextTypes.DEFAULT_TYPE):
     f"👤 Name: {data.get('first_name')} {data.get('last_name')}\n"
     f"📞 Phone: {data.get('phone_number')}\n\n"
     f"🏠 Address:\n"
-    f"Address Line 1: {data.get('address1')}\n"
-    f"City: {data.get('city')}\n"
-    f"State: {data.get('state')}\n"
-    f"ZIP: {data.get('zip')}\n"
-    f"Country: {data.get('country')}\n\n"
+    f"🏠 Address: {data.get('address1')}\n"
+    f"🌆 City: {data.get('city')}\n"
+    f"🗺️ State: {data.get('state')}\n"
+    f"📮 ZIP: {data.get('zip')}\n"
+    f"🌍 Country: {data.get('country')}\n\n"
     f"💳 Withdrawal Method: {data.get('withdrawal_method')}\n"
 )
 
