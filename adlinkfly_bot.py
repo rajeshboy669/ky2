@@ -209,18 +209,22 @@ async def account(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Format response
         msg = (
-            f"👤 <b>Account Details</b>\n\n"
-            f"👤 Username: {data.get('username')}\n"
-            f"📧 Email: {data.get('email')}\n"
-            f"🔑 API Token: {data.get('api_token')}\n\n"
-            f"💰 Publisher Earnings: {data.get('publisher_earnings')}\n"
-            f"🤝 Referral Earnings: {data.get('referral_earnings')}\n\n"
-            f"👤 Name: {data.get('first_name')} {data.get('last_name')}\n"
-            f"📞 Phone: {data.get('phone_number')}\n"
-            f"🌍 Country: {data.get('country')}\n"
-            f"🏠 Address: {data.get('address1')} {data.get('address2')}, {data.get('city')}, {data.get('state')} {data.get('zip')}\n\n"
-            f"💳 Withdrawal Method: {data.get('withdrawal_method')}\n"
-        )
+    f"👤 <b>Account Details</b>\n\n"
+    f"👤 Username: {data.get('username')}\n"
+    f"📧 Email: {data.get('email')}\n"
+    f"🔑 API Token: {data.get('api_token')}\n\n"
+    f"💰 Publisher Earnings: {data.get('publisher_earnings')}\n"
+    f"🤝 Referral Earnings: {data.get('referral_earnings')}\n\n"
+    f"👤 Name: {data.get('first_name')} {data.get('last_name')}\n"
+    f"📞 Phone: {data.get('phone_number')}\n\n"
+    f"🏠 Address:\n"
+    f"Address Line 1: {data.get('address1')}\n"
+    f"City: {data.get('city')}\n"
+    f"State: {data.get('state')}\n"
+    f"ZIP: {data.get('zip')}\n"
+    f"Country: {data.get('country')}\n\n"
+    f"💳 Withdrawal Method: {data.get('withdrawal_method')}\n"
+)
 
         await update.message.reply_text(msg, parse_mode="HTML")
 
