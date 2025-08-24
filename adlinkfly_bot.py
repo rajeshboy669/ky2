@@ -82,18 +82,25 @@ async def process_text(text: str, api_key: str) -> str:
     return text
 
 # ----------------- Bot Commands -----------------
+def get_main_menu():
+    keyboard = [
+        [KeyboardButton("🏠 Start"), KeyboardButton("🔑 Set API")],
+        [KeyboardButton("📊 Balance"), KeyboardButton("👤 Account")],
+        [KeyboardButton("💸 Withdraw"), KeyboardButton("🚪 Logout")],
+        [KeyboardButton("ℹ️ Help"), KeyboardButton("✨ Features")],
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
+# Modify start to show menu
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_name = update.message.from_user.full_name
-    keyboard = [[InlineKeyboardButton("Sign Up", url="https://linxshort.me/auth/signup")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
     welcome_message = (
         f"Hello {user_name}! 👋😃\n\n"
         "🚀 Welcome to Linxshort BOT - Your Personal URL Shortener Bot. 🌐\n\n"
         "Just send me a link, and I'll work my magic to shorten it for you. Plus, I'll keep track of your earnings! 💰💼\n\n"
-        "Get started now and experience the power of Linxshort BOT. 💪🔗\n\n"
         "⚡️Still Have Doubts? Contact 👉 @Linxshort"
     )
-    await update.message.reply_text(welcome_message, reply_markup=reply_markup)
+    await update.message.reply_text(welcome_message, reply_markup=get_main_menu())
 
 async def set_api_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
@@ -328,6 +335,31 @@ async def cancel_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("❌ Withdrawal canceled.")
     return ConversationHandler.END
 
+
+# ----------------- Handle Menu Buttons -----------------
+async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+
+    if text == "🏠 Start":
+        await start(update, context)
+    elif text == "🔑 Set API":
+        await update.message.reply_text("Use /setapi <API_KEY> to set your API key.")
+    elif text == "📊 Balance":
+        await balance(update, context)
+    elif text == "👤 Account":
+        await account(update, context)
+    elif text == "💸 Withdraw":
+        await withdraw_start(update, context)
+    elif text == "🚪 Logout":
+        await logout(update, context)
+    elif text == "ℹ️ Help":
+        await help(update, context)
+    elif text == "✨ Features":
+        await features(update, context)
+    else:
+        await handle_message(update, context)
+
+
 # ----------------- Main -----------------
 def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
@@ -352,8 +384,9 @@ def main():
     application.add_handler(CommandHandler("features", features))
     application.add_handler(CommandHandler("balance", balance))
     application.add_handler(CommandHandler("account", account))
-    application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
-
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_handler))
+    application.add_handler(MessageHandler(filters.PHOTO, handle_message))
+    
     # Start polling
     application.run_polling()
 
