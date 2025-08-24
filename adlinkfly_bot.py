@@ -367,15 +367,16 @@ def main():
 
     # Withdraw conversation
     withdraw_handler = ConversationHandler(
-        entry_points=[CommandHandler("withdraw", withdraw_start)],
-        states={
-            WITHDRAW_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_amount)],
-            WITHDRAW_METHOD: [CallbackQueryHandler(withdraw_method)],
-            WITHDRAW_DETAILS: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_details)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel_withdraw)],
-    )
-    application.add_handler(withdraw_handler)
+    entry_points=[CommandHandler("withdraw", withdraw_start),
+                  MessageHandler(filters.Regex("💸 Withdraw"), withdraw_start)],  # menu button too
+    states={
+        WITHDRAW_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_amount)],
+        WITHDRAW_METHOD: [CallbackQueryHandler(withdraw_method)],
+        WITHDRAW_DETAILS: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_details)],
+    },
+    fallbacks=[CommandHandler("cancel", cancel_withdraw)],
+)
+
 
     # Other commands
     application.add_handler(CommandHandler("start", start))
@@ -385,7 +386,8 @@ def main():
     application.add_handler(CommandHandler("features", features))
     application.add_handler(CommandHandler("balance", balance))
     application.add_handler(CommandHandler("account", account))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_handler))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_handler, block=False))
+
     application.add_handler(MessageHandler(filters.PHOTO, handle_message))
     
     # Start polling
