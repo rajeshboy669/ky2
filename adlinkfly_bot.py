@@ -94,35 +94,39 @@ def get_main_menu():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
 # Modify start to show menu
+from telegram.helpers import escape_markdown
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.message.from_user
-    user_name = f"@{user.username}" if user.username else user.first_name
+    if user.username:
+        user_name = f"@{escape_markdown(user.username, version=2)}"
+    else:
+        user_name = escape_markdown(user.first_name, version=2)
 
     welcome_message = (
         f"👋 Hello {user_name}!\n\n"
-        "🚀 **Welcome to Linxshort BOT** — your personal URL shortener & earnings tracker.\n\n"
-        "🔗 **How it works:** Just send me any link and I'll shorten it instantly.\n"
-        "💰 **Track earnings:** Check your balance, stats, and withdraw anytime.\n\n"
+        "🚀 *Welcome to Linxshort BOT* — your personal URL shortener & earnings tracker.\n\n"
+        "🔗 *How it works:* Send me any link and I'll shorten it instantly.\n"
+        "💰 *Track earnings:* Check your balance, stats, and withdraw anytime.\n\n"
         "✨ Use the menu below to get started or explore all commands.\n\n"
         "❓ Need help? Contact 👉 @Linxshort"
     )
 
-    # Inline button for Sign Up only
     signup_button = [
         [InlineKeyboardButton("📝 Sign Up", url="https://linxshort.me/auth/signup")]
     ]
     reply_markup = InlineKeyboardMarkup(signup_button)
 
-    # Send welcome + signup button
+    # Send welcome + signup
     await update.message.reply_text(
         welcome_message,
-        parse_mode="Markdown",
+        parse_mode="MarkdownV2",
         reply_markup=reply_markup,
     )
 
-    # Show the persistent menu
+    # Show menu separately
     await update.message.reply_text(
-        "⬇️ Main Menu",
+        " ",
         reply_markup=get_main_menu()
     )
 
