@@ -97,6 +97,9 @@ def get_main_menu():
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_name = update.message.from_user.full_name
 
@@ -104,24 +107,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [[InlineKeyboardButton("📝 Sign Up", url="https://linxshort.me/auth/signup")]]
     signup_markup = InlineKeyboardMarkup(keyboard)
 
-    # Welcome text (MarkdownV2 safe — escaped special chars)
+    # Welcome text
     welcome_message = (
-        f"👋 Hello *{user_name}*!\n\n"
-        "🚀 *Welcome to Linxshort BOT* — your personal URL shortener & earnings tracker.\n\n"
-        "🔗 *How it works*: Send me any link and I\\'ll shorten it instantly.\n\n"
-        "💰 *Track earnings*: Check your balance, stats, and withdraw anytime.\n\n"
-        "✨ Use the menu below to get started or explore all commands.\n\n"
+        f"👋 Hello {user_name}!\n\n"
+        "🚀 Welcome to *Linxshort BOT* — your personal URL shortener & earnings tracker. 🌐\n\n"
+        "🔗 Just send me a link, and I'll shorten it instantly.\n\n"
+        "💰 I’ll also keep track of your balance, stats, and withdrawals.\n\n"
+        "⚡️ Get started now and experience the power of Linxshort BOT. 💪🔗\n\n"
         "❓ Need help? Contact 👉 @Linxshort"
     )
 
-    # Send welcome + signup button
+    # Send welcome message + signup button
     await update.message.reply_text(
         welcome_message,
-        parse_mode="MarkdownV2",
+        parse_mode="Markdown",
         reply_markup=signup_markup
     )
 
-    # Then show the main menu right after
+    # Then send main menu buttons
     await update.message.reply_text(
         " ",
         reply_markup=get_main_menu()
