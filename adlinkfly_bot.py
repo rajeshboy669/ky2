@@ -86,7 +86,8 @@ async def process_text(text: str, api_key: str) -> str:
 def get_main_menu():
     keyboard = [
         [KeyboardButton("🏠 Start")],
-        [KeyboardButton("📊 Balance"), KeyboardButton("👤 Account"), KeyboardButton("💸 Withdraw")],
+        [KeyboardButton("👤 Account")],
+        [KeyboardButton("📊 Balance"), KeyboardButton("💸 Withdraw")],
         [KeyboardButton("ℹ️ Help"), KeyboardButton("✨ Features"), KeyboardButton("🔑 Set API")],
         [KeyboardButton("🚪 Logout")],
     ]
