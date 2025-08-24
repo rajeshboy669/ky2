@@ -282,14 +282,14 @@ async def account(update: Update, context: ContextTypes.DEFAULT_TYPE):
 WITHDRAW_AMOUNT, WITHDRAW_METHOD, WITHDRAW_DETAILS = range(3)
 
 async def withdraw_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("💰 Enter the amount you want to withdraw:")
+    await update.message.reply_text("💰 Enter the amount you want to withdraw or use /cancel to cancel withdraw process!!!:")
     return WITHDRAW_AMOUNT
 
 async def withdraw_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         amount = float(update.message.text)
         if amount <= 0:
-            await update.message.reply_text("❌ Amount must be greater than 0. Enter again:")
+            await update.message.reply_text("❌ Amount must be greater than 0. Enter again or use /cancel to cancel withdraw process!!!")
             return WITHDRAW_AMOUNT
         context.user_data["withdraw_amount"] = amount
 
@@ -299,7 +299,7 @@ async def withdraw_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         resp = requests.get(f"https://linxshort.me/withdraw-methods-api.php?api={api_key}", timeout=10).json()
 
         if resp["status"] != "success" or not resp["methods"]:
-            await update.message.reply_text("❌ No withdrawal methods found.")
+            await update.message.reply_text("❌ No withdrawal methods found use /cancel to cancel withdraw process!!!.")
             return ConversationHandler.END
 
         methods = [m for m in resp["methods"] if m["status"]]
@@ -311,10 +311,10 @@ async def withdraw_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return WITHDRAW_METHOD
 
     except ValueError:
-        await update.message.reply_text("❌ Invalid amount. Enter a numeric value:")
+        await update.message.reply_text("❌ Invalid amount. Enter a numeric value or use /cancel to cancel withdraw process!!!:")
         return WITHDRAW_AMOUNT
     except Exception as e:
-        await update.message.reply_text(f"❌ Error: {e}")
+        await update.message.reply_text(f"❌ *Error* use /cancel to cancel withdraw process!!!: {e}")
         return ConversationHandler.END
 
 async def withdraw_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -325,7 +325,7 @@ async def withdraw_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     method = next((m for m in context.user_data["withdraw_methods"] if m["id"] == method_id), None)
     if not method:
-        await query.edit_message_text("❌ Invalid method selected.")
+        await query.edit_message_text("❌ Invalid method selected use /cancel to cancel withdraw process!!!.")
         return ConversationHandler.END
 
     context.user_data["withdraw_method_name"] = method["name"]
@@ -359,7 +359,7 @@ async def submit_withdrawal(update_obj, context: ContextTypes.DEFAULT_TYPE):
         if resp["status"] == "success":
             msg = f"✅ Withdrawal request submitted!\nAmount: {payload['amount']}\nMethod: {context.user_data['withdraw_method_name']}"
         else:
-            msg = f"❌ Withdrawal failed: {resp.get('message', 'Unknown error')}"
+            msg = f"❌ Withdrawal failed use /cancel to cancel withdraw process!!!: {resp.get('message', 'Unknown error')}"
 
         if isinstance(update_obj, Update):
             await update_obj.message.reply_text(msg)
@@ -367,7 +367,7 @@ async def submit_withdrawal(update_obj, context: ContextTypes.DEFAULT_TYPE):
             await update_obj.edit_message_text(msg)
         return ConversationHandler.END
     except Exception as e:
-        await update_obj.message.reply_text(f"❌ Error: {e}")
+        await update_obj.message.reply_text(f"❌ *Error* use /cancel to cancel withdraw process!!!: {e}")
         return ConversationHandler.END
 
 async def cancel_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
