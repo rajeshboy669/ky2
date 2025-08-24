@@ -185,6 +185,48 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg)
     except Exception as e:
         await update.message.reply_text(f"❌ Failed: {e}")
+        
+# ----------------- Account Info -----------------
+async def account(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user = users_collection.find_one({"user_id": user_id})
+
+    if not user:
+        await update.message.reply_text("⚠️ You are not logged in. Use /login <API_KEY>")
+        return
+
+    api_key = user["api_key"]
+    url = f"https://linxshort.me/account-api.php?api={api_key}"
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                data = await resp.json()
+
+        if data.get("status") != "success":
+            await update.message.reply_text("❌ Invalid API key or error fetching data.")
+            return
+
+        # Format response
+        msg = (
+            f"👤 <b>Account Details</b>\n\n"
+            f"👤 Username: {data.get('username')}\n"
+            f"📧 Email: {data.get('email')}\n"
+            f"🔑 API Token: {data.get('api_token')}\n\n"
+            f"💰 Publisher Earnings: {data.get('publisher_earnings')}\n"
+            f"🤝 Referral Earnings: {data.get('referral_earnings')}\n\n"
+            f"👤 Name: {data.get('first_name')} {data.get('last_name')}\n"
+            f"📞 Phone: {data.get('phone_number')}\n"
+            f"🌍 Country: {data.get('country')}\n"
+            f"🏠 Address: {data.get('address1')} {data.get('address2')}, {data.get('city')}, {data.get('state')} {data.get('zip')}\n\n"
+            f"💳 Withdrawal Method: {data.get('withdrawal_method')}\n"
+        )
+
+        await update.message.reply_text(msg, parse_mode="HTML")
+
+    except Exception as e:
+        logger.error(e)
+        await update.message.reply_text("⚠️ Error fetching account details.")
 
 # ----------------- Withdraw Feature -----------------
 WITHDRAW_AMOUNT, WITHDRAW_METHOD, WITHDRAW_DETAILS = range(3)
@@ -305,6 +347,7 @@ def main():
     application.add_handler(CommandHandler("help", help))
     application.add_handler(CommandHandler("features", features))
     application.add_handler(CommandHandler("balance", balance))
+    application.add_handler(CommandHandler("account", account))
     application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
 
     # Start polling
