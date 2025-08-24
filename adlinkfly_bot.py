@@ -202,25 +202,35 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_data = users_collection.find_one({"user_id": user_id})
-    api_key = context.user_data.get("api_key") or user_data.get("api_key")
+    api_key = context.user_data.get("api_key") or (user_data.get("api_key") if user_data else None)
+
     if not api_key:
-        await update.message.reply_text("Set API key first using /setapi.")
+        await update.message.reply_text(
+            "⚠️ You haven’t set your API key yet.\n\n"
+            "👉 Please use /setapi <YOUR_API_KEY> and try again."
+        )
         return
+
     try:
-        resp = requests.get(f"https://linxshort.me/balance-api.php?api={api_key}", timeout=10).json()
-        if resp["status"] == "success":
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://linxshort.me/balance-api.php?api={api_key}", timeout=10) as resp:
+                data = await resp.json()
+
+        if data.get("status") == "success":
             msg = (
-                f"👤 Username: {resp['username']}\n"
-                f"💰 Balance: {resp['balance']}\n"
-                f"✅ Withdrawn: {resp['withdrawn']}\n"
-                f"🔗 Total Links: {resp['total_links']}\n"
-                f"💸 Referrals: {resp['referrals']}"
+                f"👤 Username: {data['username']}\n"
+                f"💰 Balance: {data['balance']}\n"
+                f"✅ Withdrawn: {data['withdrawn']}\n"
+                f"🔗 Total Links: {data['total_links']}\n"
+                f"💸 Referrals: {data['referrals']}"
             )
         else:
-            msg = f"❌ Error: {resp.get('message', 'Unknown')}"
+            msg = f"❌ Error: {data.get('message', 'Unknown error')}"
+
         await update.message.reply_text(msg)
+
     except Exception as e:
-        await update.message.reply_text(f"❌ Failed: {e}")
+        await update.message.reply_text(f"❌ Failed to fetch balance: {e}")
         
 # ----------------- Account Info -----------------
 async def account(update: Update, context: ContextTypes.DEFAULT_TYPE):
