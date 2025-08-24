@@ -106,7 +106,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     welcome_message = (
         f"👋 Hello {user_name}!\n\n"
         "🚀 *Welcome to Linxshort BOT* — your personal URL shortener & earnings tracker.\n\n"
-        "🔗 *How it works:* Send me any link and I'll shorten it instantly.\n"
+        "🔗 *How it works:* Send me any link and I'll shorten it instantly.\n\n"
         "💰 *Track earnings:* Check your balance, stats, and withdraw anytime.\n\n"
         "✨ Use the menu below to get started or explore all commands.\n\n"
         "❓ Need help? Contact 👉 @Linxshort"
