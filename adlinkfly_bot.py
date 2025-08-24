@@ -107,10 +107,6 @@ from telegram.ext import ContextTypes
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_name = update.message.from_user.full_name
 
-    # Signup button
-    keyboard = [[InlineKeyboardButton("📝 Sign Up", url="https://linxshort.me/auth/signup")]]
-    signup_markup = InlineKeyboardMarkup(keyboard)
-
     # Welcome text
     welcome_message = (
         f"👋 Hello {user_name}!\n\n"
@@ -121,16 +117,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "❓ Need help? Contact 👉 @Linxshort"
     )
 
-    # Send welcome message + signup button
+    # Send welcome message + main menu buttons
     await update.message.reply_text(
         welcome_message,
         parse_mode="Markdown",
-        reply_markup=signup_markup
-    )
-
-    # Then send main menu buttons
-    await update.message.reply_text(
-        " ",
         reply_markup=get_main_menu()
     )
 
