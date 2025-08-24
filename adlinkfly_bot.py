@@ -6,6 +6,7 @@ import aiohttp
 import requests
 from threading import Thread
 from flask import Flask
+from telegram import ReplyKeyboardMarkup, KeyboardButton
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
