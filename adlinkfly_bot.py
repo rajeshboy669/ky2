@@ -85,10 +85,10 @@ async def process_text(text: str, api_key: str) -> str:
 # ----------------- Bot Commands -----------------
 def get_main_menu():
     keyboard = [
-        [KeyboardButton("🏠 Start"), KeyboardButton("🔑 Set API")],
-        [KeyboardButton("📊 Balance"), KeyboardButton("👤 Account")],
-        [KeyboardButton("💸 Withdraw"), KeyboardButton("🚪 Logout")],
-        [KeyboardButton("ℹ️ Help"), KeyboardButton("✨ Features")],
+        [KeyboardButton("🏠 Start")],
+        [KeyboardButton("📊 Balance"), KeyboardButton("👤 Account"), KeyboardButton("💸 Withdraw")],
+        [KeyboardButton("ℹ️ Help"), KeyboardButton("✨ Features"), KeyboardButton("🔑 Set API")],
+        [KeyboardButton("🚪 Logout")],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
